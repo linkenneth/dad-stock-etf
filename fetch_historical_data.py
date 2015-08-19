@@ -3,32 +3,13 @@ import glob
 import urllib
 from datetime import datetime
 
-HUI_STOCKS = [
-    'ABX'  ,  # NYSE : Barrick Gold
-    'GG'   ,  # NYSE : Goldcorp
-    'NEM'  ,  # NYSE : Newmont Mining
-    'AEM'  ,  # NYSE : Agnico Eagle Mines
-    'BVN'  ,  # NYSE : Compania de Minas Buenaventura
-    'SBGL' ,  # NYSE : Sibanye Gold Limited
-    'AU'   ,  # NYSE : AngloGold Ashanti
-    'GOLD' ,  # NASDAQ : Randgold Resources
-    'KGC'  ,  # NYSE : Kinross Gold
-    'BTG'  ,  # NYSE : B2Gold Corp
-    'AUQ'  ,  # NYSE : AuRico Gold
-    'AUY'  ,  # NYSE : Yamana Gold
-    'EGO'  ,  # NYSE : Eldorado Gold Corp
-    'NGD'  ,  # NYSE : New Gold Inc
-    'AGI'  ,  # NYSE : Alamos Gold Inc
-    'HMY'  ,  # NYSE : Harmony Gold Mining
-    'GFI'  ,  # NYSE : Gold Fields Limited
-    'IAG'  ,  # NYSE : Iamgoldcorp
-]
+from common import HUI_STOCKS
 
 BASE_URL = 'http://ichart.yahoo.com/table.csv?s='
 START_DATE = datetime(2014, 01, 01)
 END_DATE = datetime.today()
 
-if __name__ == '__main__':
+def fetch():
     for stock in HUI_STOCKS:
         file_name = 'data/%s.csv' % stock
         if not glob.glob(file_name):

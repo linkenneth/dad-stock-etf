@@ -24,14 +24,14 @@ for csv in glob.glob('data/*.csv'):
     means[stock_name] = mean = pd.rolling_mean(reversed_df, window=N)
     relativities[stock_name] = (reversed_df > mean).astype(int)
 
-relativity = pd.DataFrame(0.0, index=reversed_df.index,
-                          columns=['Relativity'], dtype=float)
-for stock_name, r in relativities.items():
-    # TODO handle merger
-    if stock_name == 'AUQ':
-        continue
-    relativity += r
+if __name__ == '__main__':
+    relativity = pd.DataFrame(0.0, index=reversed_df.index,
+                              columns=['Relativity'], dtype=float)
+    for stock_name, r in relativities.items():
+        # TODO handle merger
+        if stock_name == 'AUQ':
+            continue
+        relativity += r
 
-relativity.plot()
-plt.show()
-
+    relativity.plot()
+    plt.show()

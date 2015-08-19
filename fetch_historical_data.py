@@ -25,7 +25,7 @@ HUI_STOCKS = [
 ]
 
 BASE_URL = 'http://ichart.yahoo.com/table.csv?s='
-START_DATE = datetime(2010, 01, 01)
+START_DATE = datetime(2014, 01, 01)
 END_DATE = datetime.today()
 
 if __name__ == '__main__':

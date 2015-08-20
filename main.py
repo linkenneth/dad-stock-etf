@@ -41,42 +41,60 @@ def plot_relativity(index):
 class Application(tk.Frame):
     def __init__(self, master=None):
         tk.Frame.__init__(self, master)
+        self.master = master
         self.pack()
-        self.createWidgets()
+        self.initLeftPanel()
+        self.initRightPanel()
 
-    def say_hi(self):
-        print "hi there, everyone!"
+    def initLeftPanel(self):
+        self.left_panel = LeftPanel(self, relief=tk.RAISED, borderwidth=1)
+        self.left_panel.pack(side=tk.LEFT)
 
-    def createWidgets(self):
-        self.QUIT = tk.Button(self)
-        self.QUIT["text"] = "QUIT"
-        self.QUIT["fg"]   = "red"
-        self.QUIT["command"] =  self.quit
+    def initRightPanel(self):
+        self.right_panel = RightPanel(self, relief=tk.RAISED, borderwidth=1,
+                                      width=340)
+        self.right_panel.pack(side=tk.LEFT, fill=tk.Y)
 
-        self.QUIT.pack({"side": "left"})
+class LeftPanel(tk.Frame):
+    '''
+    Left panel of the application. Contains the main area on which to draw
+    the graph.
+    '''
+    def __init__(self, master=None, *args, **kwargs):
+        tk.Frame.__init__(self, master, *args, **kwargs)
+        self.master = master
+        self.draw_graph()
 
-        self.hi_there = tk.Button(self)
-        self.hi_there["text"] = "Hello",
-        self.hi_there["command"] = self.say_hi
+    def draw_graph(self):
+        figure = plt.Figure(figsize=(7, 6), dpi=100)
+        a = figure.add_subplot(111)
+        t = np.arange(0.0, 3.0, 0.01)
+        s = np.sin(2 * 3.14 * t)
+        a.plot(t, s)
 
-        self.hi_there.pack({"side": "left"})
+        canvas = FigureCanvasTkAgg(figure, master=self)
+        canvas.show()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
+class RightPanel(tk.Frame):
+    '''
+    Right panel of the application. Contains the configuration area, where
+    you tweak the statistics that you want in the graph on the left.
+    '''
+    def __init__(self, master=None, *args, **kwargs):
+        tk.Frame.__init__(self, master, *args, **kwargs)
+        self.master = master
+
 
 if __name__ == '__main__':
     # initiate Tkinter
     root = tk.Tk()
+    root.geometry('1200x600+300+300')
     app = Application(root)
-
-    figure = plt.Figure(figsize=(5, 4), dpi=100)
-    a = figure.add_subplot(111)
-    t = np.arange(0.0, 3.0, 0.01)
-    s = np.sin(2 * 3.14 * t)
-    a.plot(t, s)
-    canvas = FigureCanvasTkAgg(figure, master=root)
-    canvas.show()
-    canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
     # plot on Tkinter
     # loop
+    root.attributes("-topmost", True)
     tk.mainloop()
 
     # cleanup

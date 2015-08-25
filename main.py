@@ -85,7 +85,7 @@ class LeftPanel(tk.Frame):
         tk.Frame.__init__(self, master, *args, **kwargs)
         self.master = master
         self.init_graph()
-        self.draw_graph()
+        # self.draw_graph()
 
     def init_graph(self):
         self.figure = plt.Figure()  # TODO set size?
@@ -96,11 +96,12 @@ class LeftPanel(tk.Frame):
 
     # TODO which index? parameters etc.
     def draw_graph(self):
-        subplot = self.figure.add_subplot(111)
-        x = np.arange(0.0, 3.0, 0.01)
-        y = np.sin(2 * 3.14 * x)
-        subplot.plot(x, y)
-        self.canvas.show()
+        if self.master.right_panel.index.get() == 'HUI':
+            subplot = self.figure.add_subplot(111)
+            x = np.arange(0.0, 3.0, 0.01)
+            y = np.sin(2 * 3.14 * x)
+            subplot.plot(x, y)
+            self.canvas.show()
 
 class RightPanel(tk.Frame):
     '''
@@ -111,11 +112,16 @@ class RightPanel(tk.Frame):
         tk.Frame.__init__(self, master, *args, **kwargs)
         self.master = master
 
-        # INDEX
+        # INDEX OPTION MENU
         tk.Label(self, text='Index:').grid(row=0, sticky=tk.W)
-        var = tk.StringVar(self)
-        var.set('HUI')
-        self.index = tk.OptionMenu(self, var, 'HUI', 'None').grid(row=1)
+        self.index = tk.StringVar(self)
+        self.index.set('HUI')
+        tk.OptionMenu(self, self.index, 'HUI', 'None').grid(row=1, sticky=tk.W)
+
+        # DRAW BUTTON
+        button = tk.Button(self, text='Draw!',
+                           command=self.master.left_panel.draw_graph)
+        button.grid(row=2)
 
 
 if __name__ == '__main__':

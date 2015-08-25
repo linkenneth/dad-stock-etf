@@ -22,6 +22,10 @@ from fetch_historical_data import fetch
 
 DATA_PATH = './data'
 
+############
+# PLOTTING #
+############
+
 def plot_relativity(index):
     '''
     The "relativity" (made that word up myself) of a stock index is defined
@@ -38,11 +42,29 @@ def plot_relativity(index):
     '''
     index = 'HUI'  # only HUI for now
 
+##############
+# Tkinter UI #
+##############
+
 class Application(tk.Frame):
+    '''
+    The UI should look like this:
+    ---------------------------------------------
+    |                        |                  |
+    |               /\       |                  |
+    |          _ _ /  \      |                  |
+    |         /        ---   |                  |
+    |        /            \  |  OPTIONS         |
+    |     /\/                |                  |
+    |    /                   |                  |
+    |   |                    |                  |
+    |  /                     |                  |
+    ---------------------------------------------
+    '''
     def __init__(self, master=None):
         tk.Frame.__init__(self, master)
         self.master = master
-        self.pack()
+        self.pack(fill=tk.BOTH)
         self.initLeftPanel()
         self.initRightPanel()
 
@@ -51,9 +73,8 @@ class Application(tk.Frame):
         self.left_panel.pack(side=tk.LEFT)
 
     def initRightPanel(self):
-        self.right_panel = RightPanel(self, relief=tk.RAISED, borderwidth=1,
-                                      width=340)
-        self.right_panel.pack(side=tk.LEFT, fill=tk.Y)
+        self.right_panel = RightPanel(self, relief=tk.RAISED, borderwidth=1)
+        self.right_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
 class LeftPanel(tk.Frame):
     '''
@@ -63,18 +84,23 @@ class LeftPanel(tk.Frame):
     def __init__(self, master=None, *args, **kwargs):
         tk.Frame.__init__(self, master, *args, **kwargs)
         self.master = master
+        self.init_graph()
         self.draw_graph()
 
-    def draw_graph(self):
-        figure = plt.Figure(figsize=(7, 6), dpi=100)
-        a = figure.add_subplot(111)
-        t = np.arange(0.0, 3.0, 0.01)
-        s = np.sin(2 * 3.14 * t)
-        a.plot(t, s)
+    def init_graph(self):
+        self.figure = plt.Figure()  # TODO set size?
 
-        canvas = FigureCanvasTkAgg(figure, master=self)
-        canvas.show()
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self)
+        # TODO resize_callbacks maybe
+        self.canvas.get_tk_widget().pack()
+
+    # TODO which index? parameters etc.
+    def draw_graph(self):
+        subplot = self.figure.add_subplot(111)
+        x = np.arange(0.0, 3.0, 0.01)
+        y = np.sin(2 * 3.14 * x)
+        subplot.plot(x, y)
+        self.canvas.show()
 
 class RightPanel(tk.Frame):
     '''
@@ -85,11 +111,17 @@ class RightPanel(tk.Frame):
         tk.Frame.__init__(self, master, *args, **kwargs)
         self.master = master
 
+        # INDEX
+        tk.Label(self, text='Index:').grid(row=0, sticky=tk.W)
+        var = tk.StringVar(self)
+        var.set('HUI')
+        self.index = tk.OptionMenu(self, var, 'HUI', 'None').grid(row=1)
+
 
 if __name__ == '__main__':
     # initiate Tkinter
     root = tk.Tk()
-    root.geometry('1200x600+300+300')
+    root.geometry('1000x500')
     app = Application(root)
 
     # plot on Tkinter

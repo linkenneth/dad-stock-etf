@@ -2,6 +2,8 @@
 Main program to run the interactive plot that dad wants.
 '''
 
+import re
+import glob
 import numpy as np
 import pandas as pd
 
@@ -26,21 +28,48 @@ DATA_PATH = './data'
 # PLOTTING #
 ############
 
-def plot_relativity(index):
+STOCK_PRICES = {}
+
+def calculate_relativity(index):
     '''
     The "relativity" (made that word up myself) of a stock index is defined
     as the % of its N stocks 0, ..., i, ..., N - 1, that, on a given day t,
-    have prices greater than the N-day average of that stock. That is,
+    have prices greater than the M-day average of that stock. That is,
 
-    R_t = count(p_{i,t} > mean(p_{i,t-1}, ... p_{i,t-N})) / N
+    R_t = count_N(p_{i,t} > mean(p_{i,t-1}, ... p_{i,t-M})) / N
         -- R_t = relativity on day t
         -- p_{i,t} = price of stock i on day t
 
     The main purpose of this program is to calculate and plot this index,
     as well as to be able to see the effect of predicting particular stock
     prices on the shape of the graph for the future.
+
+    Returns a Pandas DataFrame, with dates as the DataFrame index and a
+    column, 'Relativity', containing the relativity of the index.
     '''
     index = 'HUI'  # only HUI for now
+    datatype = 'Close'
+    M = 50
+
+    N = 0
+    relativities = {}
+    for csv in glob.glob('%s/*.csv' % DATA_PATH):
+        N += 1
+        symbol = re.match(r'%s/([A-Z]+)\.csv' % DATA_PATH, csv).group(1)
+        STOCK_PRICES[symbol] = prices = pd.DataFrame.from_csv(csv).iloc[::-1][datatype]
+        mean = pd.rolling_mean(prices, window=M)
+        relativities[symbol] = (prices > mean).astype(int)
+
+    index_relativity = pd.DataFrame(0.0, index=prices.index,
+                                    columns=['Relativity'], dtype=float)
+    for symbol, relativity in relativities.items():
+        # TODO handle the merger tht happened
+        if symbol == 'AUQ':
+            continue
+        index_relativity += relativity
+
+    # TODO fix broadcasting error
+    return (index_relativity.index, index_relativity['Relativity'])
 
 ##############
 # Tkinter UI #
@@ -89,6 +118,7 @@ class LeftPanel(tk.Frame):
 
     def init_graph(self):
         self.figure = plt.Figure()  # TODO set size?
+        self.subplot = self.figure.add_subplot(111)
 
         self.canvas = FigureCanvasTkAgg(self.figure, master=self)
         # TODO resize_callbacks maybe
@@ -96,11 +126,12 @@ class LeftPanel(tk.Frame):
 
     # TODO which index? parameters etc.
     def draw_graph(self):
-        if self.master.right_panel.index.get() == 'HUI':
-            subplot = self.figure.add_subplot(111)
-            x = np.arange(0.0, 3.0, 0.01)
-            y = np.sin(2 * 3.14 * x)
-            subplot.plot(x, y)
+        index = self.master.right_panel.index.get()
+        if index == 'HUI':
+            x, y = calculate_relativity(index)
+            # x = np.arange(0.0, 3.0, 0.01)
+            # y = np.sin(2 * 3.14 * x)
+            self.subplot.plot(x, y)  # TODO plot same color
             self.canvas.show()
 
 class RightPanel(tk.Frame):

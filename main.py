@@ -19,6 +19,8 @@ if sys.version_info[0] < 3:
     import Tkinter as tk
 else:
     import tkinter as tk
+import ttk
+import ttk_calendar
 
 from fetch_historical_data import fetch
 
@@ -30,7 +32,7 @@ DATA_PATH = './data'
 
 STOCK_PRICES = {}
 
-def calculate_relativity(index):
+def calculate_relativity(index, window_len):
     '''
     The "relativity" (made that word up myself) of a stock index is defined
     as the % of its N stocks 0, ..., i, ..., N - 1, that, on a given day t,
@@ -49,33 +51,30 @@ def calculate_relativity(index):
     '''
     index = 'HUI'  # only HUI for now
     datatype = 'Close'
-    M = 50
+    M = window_len
 
     N = 0
-    relativities = {}
+    relativities = None  # TODO different dates
     for csv in glob.glob('%s/*.csv' % DATA_PATH):
         N += 1
         symbol = re.match(r'%s/([A-Z]+)\.csv' % DATA_PATH, csv).group(1)
         STOCK_PRICES[symbol] = prices = pd.DataFrame.from_csv(csv).iloc[::-1][datatype]
+        if relativities is None:
+            relativities = pd.DataFrame(index=prices.index)
         mean = pd.rolling_mean(prices, window=M)
         relativities[symbol] = (prices > mean).astype(int)
 
-    index_relativity = pd.DataFrame(0.0, index=prices.index,
-                                    columns=['Relativity'], dtype=float)
-    for symbol, relativity in relativities.items():
-        # TODO handle the merger tht happened
-        if symbol == 'AUQ':
-            continue
-        index_relativity += relativity
+    # TODO handle merger that happened
+    relativities = relativities.drop('AUQ', 1)
+    index_relativity = relativities.sum(1) / N
 
-    # TODO fix broadcasting error
-    return (index_relativity.index, index_relativity['Relativity'])
+    return (index_relativity.index, index_relativity)
 
 ##############
 # Tkinter UI #
 ##############
 
-class Application(tk.Frame):
+class Application(ttk.Frame):
     '''
     The UI should look like this:
     ---------------------------------------------
@@ -91,7 +90,7 @@ class Application(tk.Frame):
     ---------------------------------------------
     '''
     def __init__(self, master=None):
-        tk.Frame.__init__(self, master)
+        ttk.Frame.__init__(self, master)
         self.master = master
         self.pack(fill=tk.BOTH)
         self.initLeftPanel()
@@ -105,13 +104,13 @@ class Application(tk.Frame):
         self.right_panel = RightPanel(self, relief=tk.RAISED, borderwidth=1)
         self.right_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-class LeftPanel(tk.Frame):
+class LeftPanel(ttk.Frame):
     '''
     Left panel of the application. Contains the main area on which to draw
     the graph.
     '''
     def __init__(self, master=None, *args, **kwargs):
-        tk.Frame.__init__(self, master, *args, **kwargs)
+        ttk.Frame.__init__(self, master, *args, **kwargs)
         self.master = master
         self.init_graph()
         # self.draw_graph()
@@ -124,35 +123,44 @@ class LeftPanel(tk.Frame):
         # TODO resize_callbacks maybe
         self.canvas.get_tk_widget().pack()
 
-    # TODO which index? parameters etc.
     def draw_graph(self):
         index = self.master.right_panel.index.get()
+        window_len = self.master.right_panel.window_len.get()
         if index == 'HUI':
-            x, y = calculate_relativity(index)
-            # x = np.arange(0.0, 3.0, 0.01)
-            # y = np.sin(2 * 3.14 * x)
-            self.subplot.plot(x, y)  # TODO plot same color
+            x, y = calculate_relativity(index, window_len)
+            # TODO keep a list of current plots
+            # TODO plot new graphs every time?
+            self.subplot.plot(x, y)
             self.canvas.show()
 
-class RightPanel(tk.Frame):
+class RightPanel(ttk.Frame):
     '''
     Right panel of the application. Contains the configuration area, where
     you tweak the statistics that you want in the graph on the left.
     '''
     def __init__(self, master=None, *args, **kwargs):
-        tk.Frame.__init__(self, master, *args, **kwargs)
+        ttk.Frame.__init__(self, master, *args, **kwargs)
         self.master = master
 
         # INDEX OPTION MENU
-        tk.Label(self, text='Index:').grid(row=0, sticky=tk.W)
+        ttk.Label(self, text='Index:').grid(row=0, sticky=tk.W)
         self.index = tk.StringVar(self)
         self.index.set('HUI')
-        tk.OptionMenu(self, self.index, 'HUI', 'None').grid(row=1, sticky=tk.W)
+        ttk.OptionMenu(self, self.index, 'HUI', 'None').grid(row=1, sticky=tk.W)
+
+        # WINDOW LENGTH
+        ttk.Label(self, text='Window Length:').grid(row=2, column=0, sticky=tk.W)
+        self.window_len = tk.IntVar(self)
+        self.window_len.set(50)
+        cbox = ttk.Combobox(self, textvariable=self.window_len,
+                            values=[50, 100, 150], width=10)  # FIXME don't fix width
+        cbox.grid(row=3, sticky=tk.W)
+        ttk.Label(self, text='days').grid(row=3, column=1)
 
         # DRAW BUTTON
-        button = tk.Button(self, text='Draw!',
+        button = ttk.Button(self, text='Draw!',
                            command=self.master.left_panel.draw_graph)
-        button.grid(row=2)
+        button.grid(row=100)
 
 
 if __name__ == '__main__':
@@ -163,7 +171,7 @@ if __name__ == '__main__':
 
     # plot on Tkinter
     # loop
-    root.attributes("-topmost", True)
+    # root.attributes("-topmost", True)
     tk.mainloop()
 
     # cleanup

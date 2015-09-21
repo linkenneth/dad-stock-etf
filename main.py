@@ -2,6 +2,16 @@
 Main program to run the interactive plot that dad wants.
 '''
 
+###################
+# TODO PRIORITIES #
+###################
+# -- properly control creation of graphs -> be able to clear, create new graphs
+# -- access to reliable fetching mechanism (from Yahoo! finance)
+# -- mouseover shows nearest-y data point
+# -- choose date range (historic data)
+# -- cleanup code
+# -- not show random errors
+
 import re
 import glob
 import numpy as np
@@ -24,6 +34,8 @@ import ttk_calendar
 
 from fetch_historical_data import fetch
 
+UI_HEIGHT = 1000
+UI_LENGTH = 1000
 DATA_PATH = './data'
 
 ############
@@ -93,15 +105,16 @@ class Application(ttk.Frame):
         ttk.Frame.__init__(self, master)
         self.master = master
         self.pack(fill=tk.BOTH)
-        self.initLeftPanel()
-        self.initRightPanel()
+        self.config = {}
+        self.initLeftPanel(self.config)
+        self.initRightPanel(self.config)
 
-    def initLeftPanel(self):
-        self.left_panel = LeftPanel(self, relief=tk.RAISED, borderwidth=1)
+    def initLeftPanel(self, config):
+        self.left_panel = LeftPanel(self, config, relief=tk.RAISED, borderwidth=1)
         self.left_panel.pack(side=tk.LEFT)
 
-    def initRightPanel(self):
-        self.right_panel = RightPanel(self, relief=tk.RAISED, borderwidth=1)
+    def initRightPanel(self, config):
+        self.right_panel = RightPanel(self, config, relief=tk.RAISED, borderwidth=1)
         self.right_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
 class LeftPanel(ttk.Frame):
@@ -109,28 +122,41 @@ class LeftPanel(ttk.Frame):
     Left panel of the application. Contains the main area on which to draw
     the graph.
     '''
-    def __init__(self, master=None, *args, **kwargs):
+    def __init__(self, master, config, *args, **kwargs):
         ttk.Frame.__init__(self, master, *args, **kwargs)
         self.master = master
+        self.config = config
         self.init_graph()
         # self.draw_graph()
 
     def init_graph(self):
-        self.figure = plt.Figure()  # TODO set size?
+        figsize = (UI_HEIGHT / 100. * 2 / 3, UI_LENGTH / 100.)
+        self.figure = plt.Figure(dpi=100, figsize=figsize)
         self.subplot = self.figure.add_subplot(111)
 
+        # TODO copy this part into draw graph
         self.canvas = FigureCanvasTkAgg(self.figure, master=self)
         # TODO resize_callbacks maybe
-        self.canvas.get_tk_widget().pack()
+        self.canvas.show()
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        toolbar = NavigationToolbar2TkAgg(self.canvas, self)
+        toolbar.update()
+        self.canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
     def draw_graph(self):
-        index = self.master.right_panel.index.get()
-        window_len = self.master.right_panel.window_len.get()
+        index = self.config['index'].get()
+        window_len = self.config['window_len'].get()
         if index == 'HUI':
             x, y = calculate_relativity(index, window_len)
             # TODO keep a list of current plots
             # TODO plot new graphs every time?
             self.subplot.plot(x, y)
+
+            # rotate x-labels and fix margins
+            plt.setp(self.subplot.get_xticklabels(), rotation=45)
+            plt.margins(0.2)
+            plt.subplots_adjust(bottom=0.15)
+
             self.canvas.show()
 
 class RightPanel(ttk.Frame):
@@ -138,21 +164,23 @@ class RightPanel(ttk.Frame):
     Right panel of the application. Contains the configuration area, where
     you tweak the statistics that you want in the graph on the left.
     '''
-    def __init__(self, master=None, *args, **kwargs):
+    def __init__(self, master, config, *args, **kwargs):
         ttk.Frame.__init__(self, master, *args, **kwargs)
         self.master = master
+        self.config = config
 
         # INDEX OPTION MENU
         ttk.Label(self, text='Index:').grid(row=0, sticky=tk.W)
-        self.index = tk.StringVar(self)
-        self.index.set('HUI')
-        ttk.OptionMenu(self, self.index, 'HUI', 'None').grid(row=1, sticky=tk.W)
+        index = self.config['index'] = tk.StringVar(self)
+        index.set('HUI')
+        omenu = ttk.OptionMenu(self, index, 'HUI', 'HUI', 'None')
+        omenu.grid(row=1, sticky=tk.W)
 
         # WINDOW LENGTH
         ttk.Label(self, text='Window Length:').grid(row=2, column=0, sticky=tk.W)
-        self.window_len = tk.IntVar(self)
-        self.window_len.set(50)
-        cbox = ttk.Combobox(self, textvariable=self.window_len,
+        window_len = self.config['window_len'] = tk.IntVar(self)
+        window_len.set(50)
+        cbox = ttk.Combobox(self, textvariable=window_len,
                             values=[50, 100, 150], width=10)  # FIXME don't fix width
         cbox.grid(row=3, sticky=tk.W)
         ttk.Label(self, text='days').grid(row=3, column=1)
@@ -166,12 +194,16 @@ class RightPanel(ttk.Frame):
 if __name__ == '__main__':
     # initiate Tkinter
     root = tk.Tk()
-    root.geometry('1000x500')
+    root.geometry('%dx%d' % (UI_HEIGHT, UI_LENGTH))
     app = Application(root)
+
+    # lift UI to front, but not permanently
+    root.lift()
+    root.attributes('-topmost', True)
+    root.after_idle(root.attributes, '-topmost', False)
 
     # plot on Tkinter
     # loop
-    # root.attributes("-topmost", True)
     tk.mainloop()
 
     # cleanup

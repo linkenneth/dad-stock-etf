@@ -6,7 +6,9 @@ Main program to run the interactive plot that dad wants.
 # TODO PRIORITIES #
 ###################
 # -- properly control creation of graphs -> be able to clear, create new graphs
+# -- legend, and list of current plots
 # -- access to reliable fetching mechanism (from Yahoo! finance)
+# -- reliable calculations
 # -- mouseover shows nearest-y data point
 # -- choose date range (historic data)
 # -- cleanup code
@@ -127,18 +129,18 @@ class LeftPanel(ttk.Frame):
         self.master = master
         self.config = config
         self.init_graph()
-        # self.draw_graph()
+        self.current_plots = []  # list of (label, x, y)
 
     def init_graph(self):
         figsize = (UI_HEIGHT / 100. * 2 / 3, UI_LENGTH / 100.)
         self.figure = plt.Figure(dpi=100, figsize=figsize)
         self.subplot = self.figure.add_subplot(111)
 
-        # TODO copy this part into draw graph
         self.canvas = FigureCanvasTkAgg(self.figure, master=self)
         # TODO resize_callbacks maybe
         self.canvas.show()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        # TODO make toolbar work
         toolbar = NavigationToolbar2TkAgg(self.canvas, self)
         toolbar.update()
         self.canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
@@ -148,9 +150,11 @@ class LeftPanel(ttk.Frame):
         window_len = self.config['window_len'].get()
         if index == 'HUI':
             x, y = calculate_relativity(index, window_len)
-            # TODO keep a list of current plots
-            # TODO plot new graphs every time?
-            self.subplot.plot(x, y)
+            label = '%s %s-day %s' % (index, window_len, 'relativity')
+            self.current_plots.append( (label, x, y) )
+
+            self.subplot.plot(x, y, label=label)
+            self.subplot.legend()
 
             # rotate x-labels and fix margins
             plt.setp(self.subplot.get_xticklabels(), rotation=45)
@@ -158,6 +162,11 @@ class LeftPanel(ttk.Frame):
             plt.subplots_adjust(bottom=0.15)
 
             self.canvas.show()
+
+    def clear_graph(self):
+        self.current_plots = []
+        self.subplot.cla()
+        self.canvas.show()
 
 class RightPanel(ttk.Frame):
     '''
@@ -185,10 +194,15 @@ class RightPanel(ttk.Frame):
         cbox.grid(row=3, sticky=tk.W)
         ttk.Label(self, text='days').grid(row=3, column=1)
 
-        # DRAW BUTTON
-        button = ttk.Button(self, text='Draw!',
+        # PLOT BUTTON
+        button = ttk.Button(self, text='Plot',
                            command=self.master.left_panel.draw_graph)
-        button.grid(row=100)
+        button.grid(row=100, column=0)
+
+        # CLEAR BUTTON
+        button = ttk.Button(self, text='Clear',
+                           command=self.master.left_panel.clear_graph)
+        button.grid(row=100, column=1)
 
 
 if __name__ == '__main__':

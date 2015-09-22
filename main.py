@@ -33,11 +33,12 @@ else:
     import tkinter as tk
 import ttk
 import ttk_calendar
+import tkintertable
 
 from fetch_historical_data import fetch
 
 UI_HEIGHT = 1000
-UI_LENGTH = 1000
+UI_WIDTH = 1500
 DATA_PATH = './data'
 
 ############
@@ -132,7 +133,7 @@ class LeftPanel(ttk.Frame):
         self.current_plots = []  # list of (label, x, y)
 
     def init_graph(self):
-        figsize = (UI_HEIGHT / 100. * 2 / 3, UI_LENGTH / 100.)
+        figsize = (UI_WIDTH / 100. * 0.6, UI_HEIGHT / 100.)
         self.figure = plt.Figure(dpi=100, figsize=figsize)
         self.subplot = self.figure.add_subplot(111)
 
@@ -194,6 +195,14 @@ class RightPanel(ttk.Frame):
         cbox.grid(row=3, sticky=tk.W)
         ttk.Label(self, text='days').grid(row=3, column=1)
 
+        # TABLE VIEW OF CURRENT PLOTS
+        # TODO headers of table
+        tframe = tk.Frame(self)
+        tframe.grid(row=99, columnspan=2, sticky=tk.W+tk.E, in_=self)
+        model = tkintertable.TableModel()
+        table = tkintertable.TableCanvas(tframe, model=model, width=400)
+        table.createTableFrame()
+
         # PLOT BUTTON
         button = ttk.Button(self, text='Plot',
                            command=self.master.left_panel.draw_graph)
@@ -208,7 +217,7 @@ class RightPanel(ttk.Frame):
 if __name__ == '__main__':
     # initiate Tkinter
     root = tk.Tk()
-    root.geometry('%dx%d' % (UI_HEIGHT, UI_LENGTH))
+    root.geometry('%dx%d' % (UI_WIDTH, UI_HEIGHT))
     app = Application(root)
 
     # lift UI to front, but not permanently

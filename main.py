@@ -5,14 +5,14 @@ Main program to run the interactive plot that dad wants.
 ###################
 # TODO PRIORITIES #
 ###################
-# -- properly control creation of graphs -> be able to clear, create new graphs
-# -- legend, and list of current plots
+# -- properly control creation of graphs -> be able to clear, create new graphs (DONE)
+# -- legend, and list of current plots (DONE)
 # -- access to reliable fetching mechanism (from Yahoo! finance)
 # -- reliable calculations
 # -- mouseover shows nearest-y data point
-# -- choose date range (historic data)
+# -- choose date range (historic data) (make this crude! just type in)
 # -- cleanup code
-# -- not show random errors
+# -- fail gracefully (eg. when no data)
 
 import re
 import glob
@@ -130,7 +130,7 @@ class LeftPanel(ttk.Frame):
         self.master = master
         self.config = config
         self.init_graph()
-        self.current_plots = []  # list of (label, x, y)
+        self.current_plots = {}  # dict of label : (x, y)
 
     def init_graph(self):
         figsize = (UI_WIDTH / 100. * 0.6, UI_HEIGHT / 100.)
@@ -152,8 +152,17 @@ class LeftPanel(ttk.Frame):
         if index == 'HUI':
             x, y = calculate_relativity(index, window_len)
             label = '%s %s-day %s' % (index, window_len, 'relativity')
-            self.current_plots.append( (label, x, y) )
+            if label in self.current_plots:
+                return
 
+            self.current_plots[label] = (x, y)
+            self.config['table'].addRow(label, **{
+                'Index': index,
+                'Statistic': 'relativity',
+                'Window Length': window_len
+            })
+
+            self.config['message'].config(text='Plotting graph...')
             self.subplot.plot(x, y, label=label)
             self.subplot.legend()
 
@@ -162,10 +171,11 @@ class LeftPanel(ttk.Frame):
             plt.margins(0.2)
             plt.subplots_adjust(bottom=0.15)
 
+            self.config['message'].config(text='Done.')
             self.canvas.show()
 
     def clear_graph(self):
-        self.current_plots = []
+        self.current_plots = {}
         self.subplot.cla()
         self.canvas.show()
 
@@ -196,12 +206,15 @@ class RightPanel(ttk.Frame):
         ttk.Label(self, text='days').grid(row=3, column=1)
 
         # TABLE VIEW OF CURRENT PLOTS
-        # TODO headers of table
         tframe = tk.Frame(self)
-        tframe.grid(row=99, columnspan=2, sticky=tk.W+tk.E, in_=self)
-        model = tkintertable.TableModel()
-        table = tkintertable.TableCanvas(tframe, model=model, width=400)
+        tframe.grid(row=99, columnspan=3, sticky=tk.W+tk.E, in_=self)
+        table = self.config['table'] = \
+          tkintertable.TableCanvas(tframe, width=450, rows=0, cols=0)
         table.createTableFrame()
+        table.addColumn('')  # checkbox + color
+        table.addColumn('Index')
+        table.addColumn('Statistic')
+        table.addColumn('Window Length')
 
         # PLOT BUTTON
         button = ttk.Button(self, text='Plot',
@@ -212,6 +225,16 @@ class RightPanel(ttk.Frame):
         button = ttk.Button(self, text='Clear',
                            command=self.master.left_panel.clear_graph)
         button.grid(row=100, column=1)
+
+        # CLEAR BUTTON
+        button = ttk.Button(self, text='Fetch Data!',
+                           command=fetch)
+        button.grid(row=100, column=2)
+
+        # NOTIFICATIONS
+        message = tk.Message(self, text='')
+        message.grid(row=101, columnspan=3, sticky=tk.W+tk.E)
+        self.config['message'] = message
 
 
 if __name__ == '__main__':

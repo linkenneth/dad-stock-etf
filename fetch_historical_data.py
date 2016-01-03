@@ -1,3 +1,9 @@
+# Downloads price data for HUI stocks from Yahoo! Finance.
+#
+# See
+# https://code.google.com/p/yahoo-finance-managed/wiki/csvHistQuotesDownload
+# for details
+
 import os
 import glob
 import urllib
@@ -6,7 +12,7 @@ from datetime import datetime
 from common import HUI_STOCKS
 
 BASE_URL = 'http://ichart.yahoo.com/table.csv?s='
-START_DATE = datetime(2014, 01, 01)
+START_DATE = datetime(2012, 01, 01)
 END_DATE = datetime.today()
 
 def fetch():
@@ -30,3 +36,6 @@ def fetch():
 
         with open(file_name, 'w+') as f:
             f.write(urllib.urlopen(url).read())
+
+if __name__ == '__main__':
+    fetch()
